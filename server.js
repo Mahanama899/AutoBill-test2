@@ -83,11 +83,10 @@ app.post('/product/:id', (req, res) => {
 
 app.post('/checkout', (req, res) => {
     const order = req.body;
-
-    // output the product to the console for debugging
     orders.push(order);
 
-    res.redirect(302, 'https://assettracker.cf');
+    // Replaced redirect with a simple success status
+    res.status(200).send('Order placed successfully.'); 
 });
 
 app.get('/checkout', (req, res) => {
