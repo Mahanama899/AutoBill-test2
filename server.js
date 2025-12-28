@@ -41,6 +41,11 @@ app.get("/product", (req, res) => {
     res.json(products);
 });
 
+app.post("/clear", (req, res) => {
+    products = [];
+    res.json({ status: "cleared" });
+});
+
 app.post("/checkout", (req, res) => {
     const order = req.body;
     orders.push(order);
