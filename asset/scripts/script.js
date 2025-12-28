@@ -8,7 +8,7 @@ const deleteProducts = async() => {
     const products = responseText;
 
     for (let product of products) {
-        const response = await axios.delete(`https://lionfish-app-oy7gr.ondigitalocean.app/product/${product.id}`)
+        const response = await axios.delete(`https://lionfish-app-oy7gr.ondigitalocean.app/product`)
     }
     location.reload();
     window.scroll({
