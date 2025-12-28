@@ -1,114 +1,121 @@
 var InitialCount = -1;
 
-const deleteProducts = async() => {
-    url = 'https://lionfish-app-oy7gr.ondigitalocean.app/product';
+const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 
-    let res = await axios.get(url);
-    responseText = res.data;
-    const products = responseText;
-
-    for (let product of products) {
-        const response = await axios.delete(`https://lionfish-app-oy7gr.ondigitalocean.app/product`)
+/* =========================
+   CLEAR PRODUCTS (CHECKOUT)
+   ========================= */
+const deleteProducts = async () => {
+    try {
+        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
+        console.log("Products cleared on server");
+    } catch (err) {
+        console.error("Failed to clear products:", err);
     }
-    location.reload();
-    window.scroll({
-        top: 0,
-        left: 0,
-        behavior: 'smooth'
-    });
-}
+};
 
-const loadProducts = async() => {
-    url = 'https://lionfish-app-oy7gr.ondigitalocean.app/product';
+/* =========================
+   LOAD PRODUCTS
+   ========================= */
+const loadProducts = async () => {
+    try {
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
+        const len = products.length;
 
-    let res = await axios.get(url);
-    responseText = await res.data;
-    const products = responseText;
-    var len = products.length;
+        if (len > InitialCount + 1) {
+            $("#1").css("display", "none");
+            $("#home").css("display", "grid");
+            $("#2").css("display", "grid");
 
-    if (len > InitialCount + 1) {
-        $("#1").css("display", "none");
-        $("#home").css("display", "grid");
-        $("#2").css("display", "grid");
-        var payable = 0;
-        const products = responseText;
-        console.log(products);
-        for (let product of products) {
-            payable = payable + parseFloat(product.payable);
-        }
+            let payable = 0;
+            for (let product of products) {
+                payable += parseFloat(product.payable);
+            }
 
-        var product = products.pop();
-        const x = `
-        <section>
+            const product = products[products.length - 1];
+
+            const x = `
+            <section>
                 <div class="card card-long animated fadeInUp once">
                     <img src="asset/img/${product.id}.jpg" class="album">
                     <div class="span1">Product Name</div>
-                    <div class="card__product">
-                        <span>${product.name}</span>
-                    </div>
+                    <div class="card__product">${product.name}</div>
+
                     <div class="span2">Per Unit</div>
-                    <div class="card__price">
-                        <span>${product.price} </span>
-                    </div>
+                    <div class="card__price">${product.price}</div>
+
                     <div class="span3">Units</div>
-                    <div class="card__unit">
-                        <span>${product.taken} ${product.unit}</span>
-                    </div>
+                    <div class="card__unit">${product.taken} ${product.unit}</div>
 
                     <div class="span4">Payable</div>
-                    <div class="card__amount">
-                        <span>${product.payable}</span>
-                    </div>
+                    <div class="card__amount">${product.payable}</div>
                 </div>
             </section>
-        <section>
-        `
+            `;
 
-        document.getElementById('home').innerHTML = document.getElementById('home').innerHTML + x;
-        // Changed $ to LKR on checkout button
-        document.getElementById('2').innerHTML = "CHECKOUT LKR " + payable.toFixed(2);
-        InitialCount += 1;
+            document.getElementById("home").innerHTML += x;
+            document.getElementById("2").innerHTML =
+                "CHECKOUT LKR " + payable.toFixed(2);
+
+            InitialCount += 1;
+        }
+    } catch (err) {
+        console.error("Load products failed:", err);
     }
-}
+};
 
-var checkout = async() => {
-    document.getElementById('2').innerHTML = "<span class='loader-16' style='margin-left: 44%;'></span>"
-    var payable = 0;
-    url = 'https://lionfish-app-oy7gr.ondigitalocean.app/product';
+/* =========================
+   CHECKOUT FUNCTION
+   ========================= */
+var checkout = async () => {
+    try {
+        document.getElementById("2").innerHTML =
+            "<span class='loader-16' style='margin-left:44%;'></span>";
 
-    let res = await axios.get(url);
-    responseText = await res.data;
-    products = responseText;
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
 
-    for (let product of products) {
-        payable = payable + parseFloat(product.payable);
+        let payable = 0;
+        for (let product of products) {
+            payable += parseFloat(product.payable);
+        }
+
+        const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
+        const qrUrl =
+            `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(plainData)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
+
+        const img = await fetch(qrUrl).then(r => r.blob());
+        const image = URL.createObjectURL(img);
+
+        $("#home").css("display", "none");
+        $("#final").css("display", "none");
+        $("#image").attr("src", image);
+        $("#qr").css("display", "grid");
+
+        setTimeout(async () => {
+            $("#qr").css("display", "none");
+            $("#success").css("display", "grid");
+
+            // 🔥 CRITICAL FIX
+            await deleteProducts();
+
+            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
+            setTimeout(() => {
+                const baseUrl = window.location.href.split("?")[0];
+                window.location.href = baseUrl + "?refresh=" + Date.now();
+            }, 300);
+
+        }, 10000);
+
+    } catch (err) {
+        console.error("Checkout failed:", err);
     }
+};
 
-    // Plain text with LKR for testing
-    const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
-    const encodedPlainData = encodeURIComponent(plainData);
-    var url = `https://api.qrserver.com/v1/create-qr-code/?data=${encodedPlainData}&size=400x400&color=02c8db&bgcolor=ecf0f3&format=png`;
-
-    await fetch(url)
-        .then(function(data) {
-            return data.blob();
-        })
-        .then(function(img) {
-            var image = URL.createObjectURL(img);
-            $("#home").css("display", "none");
-            $("#final").css("display", "none");
-            window.scroll({
-                top: 0,
-                left: 0,
-                behavior: 'smooth'
-            });
-            $('#image').attr('src', image);
-            $("#qr").css("display", "grid");
-        });
-    setTimeout(function(){
-        $("#qr").css("display", "none");
-        $("#success").css("display", "grid");
-    },10000);
-
-    deleteProducts();
-}
+/* =========================
+   AUTO LOAD LOOP
+   ========================= */
+window.onload = () => {
+    setInterval(loadProducts, 300);
+};
