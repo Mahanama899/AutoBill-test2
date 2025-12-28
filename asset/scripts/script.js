@@ -7,7 +7,7 @@ const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
    ========================= */
 const deleteProducts = async () => {
     try {
-        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
+        await axios.post(`${API_BASE}/clear`, { withCredentials: false });
         console.log("Products cleared on server");
     } catch (err) {
         console.error("Failed to clear products:", err);
