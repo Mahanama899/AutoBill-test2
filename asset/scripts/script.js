@@ -108,7 +108,7 @@ var checkout = async function () {
                 window.location.href = baseUrl + "?refresh=" + new Date().getTime();
             }, 1000);
 
-        }, 10000);
+        }, 1000);
 
     } catch (err) {
         console.error("Checkout failed:", err);
