@@ -106,7 +106,7 @@ var checkout = async () => {
                 window.location.href = baseUrl + "?refresh=" + Date.now();
             }, 1000);
 
-        }, 10000);
+        }, 1000);
 
     } catch (err) {
         console.error("Checkout failed:", err);
