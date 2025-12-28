@@ -104,7 +104,7 @@ var checkout = async () => {
             setTimeout(() => {
                 const baseUrl = window.location.href.split("?")[0];
                 window.location.href = baseUrl + "?refresh=" + Date.now();
-            }, 300);
+            }, 1000);
 
         }, 10000);
 
