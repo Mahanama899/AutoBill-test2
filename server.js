@@ -42,3 +42,9 @@ app.post("/checkout", (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
+// Clear all products (checkout)
+app.delete("/product", (req, res) => {
+    products = [];
+    res.json({ status: "all products cleared" });
+});
