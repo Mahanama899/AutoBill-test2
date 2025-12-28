@@ -111,11 +111,14 @@ var checkout = async () => {
             // 🔥 CRITICAL FIX
             await deleteProducts();
 
-            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
-            setTimeout(() => {
-                const baseUrl = window.location.href.split("?")[0];
-                window.location.href = baseUrl + "?refresh=" + Date.now();
-            }, 1000);
+            InitialCount = -1;
+            document.getElementById("home").innerHTML = "";
+            $("#success").hide();
+            $("#1").show();
+            $("#final").show();
+
+
+
 
         }, 10000);
 
