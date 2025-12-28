@@ -10,9 +10,6 @@ const deleteProducts = async() => {
     for (let product of products) {
         const response = await axios.delete(`https://lionfish-app-oy7gr.ondigitalocean.app/product`)
     }
-    setTimeout(() => {
-    window.location.href = window.location.href + "?t=" + Date.now();
-    }, 300);
     location.reload();
     window.scroll({
         top: 0,
