@@ -34,6 +34,15 @@ const loadProducts = async () => {
         const products = res.data;
         const len = products.length;
 
+        if (len === 0) {
+            $("#home").empty();
+            $("#1").css("display", "grid");
+            $("#home").css("display", "none");
+            $("#2").css("display", "none");
+            InitialCount = -1;
+            return;
+        }
+
         if (len > InitialCount + 1) {
             $("#1").css("display", "none");
             $("#home").css("display", "grid");
@@ -79,6 +88,9 @@ const loadProducts = async () => {
 /* =========================
    CHECKOUT FUNCTION
    ========================= */
+/* =========================
+   CHECKOUT FUNCTION (FIXED)
+   ========================= */
 var checkout = async () => {
     try {
         document.getElementById("2").innerHTML =
@@ -108,14 +120,22 @@ var checkout = async () => {
             $("#qr").css("display", "none");
             $("#success").css("display", "grid");
 
-            // 🔥 CRITICAL FIX
+            // 1. Clear products on server
             await deleteProducts();
 
-            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
+            // 2. WAIT AND RESET (NO RELOAD)
             setTimeout(() => {
-                const baseUrl = window.location.href.split("?")[0];
-                window.location.href = baseUrl + "?refresh=" + Date.now();
-            }, 1000);
+                // Reset UI visibility
+                $("#success").css("display", "none");
+                $("#1").css("display", "grid"); // Show "Place Items" animation
+                $("#home").css("display", "none").empty(); // Clear product list
+                $("#2").css("display", "none").html("CHECKOUT"); // Reset button text
+                $("#final").css("display", "block");
+
+                // CRITICAL: Reset the counter so the loop starts from 0 again
+                InitialCount = -1; 
+                
+            }, 3000); // 3 seconds of success screen before reset
 
         }, 10000);
 
