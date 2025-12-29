@@ -1,125 +1,132 @@
 var InitialCount = -1;
-const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 
-/* =========================
-   FULLSCREEN
-   ========================= */
+const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 function goFullScreen() {
     var el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-
-    setTimeout(function () {
-        var btn = document.getElementById("fsBtn");
-        if (btn) btn.style.display = "none";
-    }, 300);
+    if (el.requestFullscreen) {
+        el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+        el.mozRequestFullScreen();
+    }
 }
+
 
 /* =========================
-   CLEAR PRODUCTS
+   CLEAR PRODUCTS (CHECKOUT)
    ========================= */
-async function clearProducts() {
-    await axios.post(API_BASE + "/clear", {}, {
-        headers: { "Content-Type": "application/json" }
-    });
-}
-
-/* =========================
-   RESET UI
-   ========================= */
-function resetUIAfterCheckout() {
-    InitialCount = -1;
-
-    document.getElementById("home").innerHTML = "";
-
-    document.getElementById("qr").style.display = "none";
-    document.getElementById("success").style.display = "none";
-    document.getElementById("home").style.display = "none";
-
-    document.getElementById("startScreen").style.display = "block";
-
-    // FORCE checkout button visible
-    document.getElementById("final").style.display = "block";
-    document.getElementById("checkoutBtn").style.display = "block";
-    document.getElementById("checkoutBtn").innerHTML = "CHECKOUT";
-}
+const deleteProducts = async () => {
+    try {
+        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
+        console.log("Products cleared on server");
+    } catch (err) {
+        console.error("Failed to clear products:", err);
+    }
+};
 
 /* =========================
    LOAD PRODUCTS
    ========================= */
-async function loadProducts() {
-    let res = await axios.get(API_BASE + "/product");
-    const products = res.data;
+const loadProducts = async () => {
+    try {
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
+        const len = products.length;
 
-    if (products.length > InitialCount + 1) {
-        document.getElementById("startScreen").style.display = "none";
-        document.getElementById("home").style.display = "block";
+        if (len > InitialCount + 1) {
+            $("#1").css("display", "none");
+            $("#home").css("display", "grid");
+            $("#2").css("display", "grid");
 
-        // FORCE checkout visible
-        document.getElementById("final").style.display = "block";
-        document.getElementById("checkoutBtn").style.display = "block";
+            let payable = 0;
+            for (let product of products) {
+                payable += parseFloat(product.payable);
+            }
 
-        var payable = 0;
-        for (var i = 0; i < products.length; i++) {
-            payable += parseFloat(products[i].payable);
+            const product = products[products.length - 1];
+
+            const x = `
+            <section>
+                <div class="card card-long animated fadeInUp once">
+                    <img src="asset/img/${product.id}.jpg" class="album">
+                    <div class="span1">Product Name</div>
+                    <div class="card__product">${product.name}</div>
+
+                    <div class="span2">Per Unit</div>
+                    <div class="card__price">${product.price}</div>
+
+                    <div class="span3">Units</div>
+                    <div class="card__unit">${product.taken} ${product.unit}</div>
+
+                    <div class="span4">Payable</div>
+                    <div class="card__amount">${product.payable}</div>
+                </div>
+            </section>
+            `;
+
+            document.getElementById("home").innerHTML += x;
+            document.getElementById("2").innerHTML =
+                "CHECKOUT LKR " + payable.toFixed(2);
+
+            InitialCount += 1;
+        }
+    } catch (err) {
+        console.error("Load products failed:", err);
+    }
+};
+
+/* =========================
+   CHECKOUT FUNCTION
+   ========================= */
+var checkout = async () => {
+    try {
+        document.getElementById("2").innerHTML =
+            "<span class='loader-16' style='margin-left:44%;'></span>";
+
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
+
+        let payable = 0;
+        for (let product of products) {
+            payable += parseFloat(product.payable);
         }
 
-        var p = products[products.length - 1];
+        const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
+        const qrUrl =
+            `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(plainData)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
 
-        document.getElementById("home").innerHTML +=
-            '<section><div class="card">' +
-            '<img src="asset/img/' + p.id + '.jpg">' +
-            '<div>' + p.name + '</div>' +
-            '<div>' + p.payable + '</div>' +
-            '</div></section>';
+        const img = await fetch(qrUrl).then(r => r.blob());
+        const image = URL.createObjectURL(img);
 
-        document.getElementById("checkoutBtn").innerHTML =
-            "CHECKOUT LKR " + payable.toFixed(2);
+        $("#home").css("display", "none");
+        $("#final").css("display", "none");
+        $("#image").attr("src", image);
+        $("#qr").css("display", "grid");
 
-        InitialCount++;
+        setTimeout(async () => {
+            $("#qr").css("display", "none");
+            $("#success").css("display", "grid");
+
+            // 🔥 CRITICAL FIX
+            await deleteProducts();
+
+            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
+            setTimeout(() => {
+                const baseUrl = window.location.href.split("?")[0];
+                window.location.href = baseUrl + "?refresh=" + Date.now();
+            }, 1000);
+
+        }, 10000);
+
+    } catch (err) {
+        console.error("Checkout failed:", err);
     }
-}
+};
 
 /* =========================
-   CHECKOUT
+   AUTO LOAD LOOP
    ========================= */
-async function checkout() {
-    document.getElementById("checkoutBtn").innerHTML = "PROCESSING...";
-
-    let res = await axios.get(API_BASE + "/product");
-    const products = res.data;
-
-    var total = 0;
-    for (var i = 0; i < products.length; i++) {
-        total += parseFloat(products[i].payable);
-    }
-
-    var qrUrl =
-        "https://api.qrserver.com/v1/create-qr-code/?data=" +
-        encodeURIComponent("Total Payable: LKR " + total.toFixed(2)) +
-        "&size=400x400";
-
-    const img = await fetch(qrUrl).then(r => r.blob());
-    document.getElementById("image").src = URL.createObjectURL(img);
-
-    document.getElementById("home").style.display = "none";
-    document.getElementById("final").style.display = "none";
-    document.getElementById("qr").style.display = "block";
-
-    setTimeout(async function () {
-        document.getElementById("qr").style.display = "none";
-        document.getElementById("success").style.display = "block";
-
-        await clearProducts();
-
-        setTimeout(resetUIAfterCheckout, 2000);
-    }, 8000);
-}
-
-/* =========================
-   LOOP
-   ========================= */
-window.onload = function () {
+window.onload = () => {
     setInterval(loadProducts, 300);
 };
