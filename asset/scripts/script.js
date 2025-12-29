@@ -1,89 +1,132 @@
 var InitialCount = -1;
-const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 
-/* FULL SCREEN */
+const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 function goFullScreen() {
     var el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-}
-
-/* LOAD PRODUCTS */
-async function loadProducts() {
-    try {
-        const res = await axios.get(API_BASE + "/product");
-        const products = res.data;
-
-        if (products.length > InitialCount + 1) {
-            $("#startScreen").hide();
-            $("#home").show();
-            $("#final").show();
-
-            let payable = 0;
-            products.forEach(p => payable += parseFloat(p.payable));
-
-            const product = products[products.length - 1];
-
-            $("#home").append(`
-                <div class="card">
-                    <p><b>${product.name}</b></p>
-                    <p>Unit: ${product.taken} ${product.unit}</p>
-                    <p>Price: LKR ${product.payable}</p>
-                </div>
-            `);
-
-            $("#checkoutBtn").text("CHECKOUT LKR " + payable.toFixed(2));
-            InitialCount++;
-        }
-    } catch (e) {
-        console.log(e);
+    if (el.requestFullscreen) {
+        el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+        el.mozRequestFullScreen();
     }
 }
 
-/* DELETE PRODUCTS */
-async function deleteProducts() {
-    await axios.delete(API_BASE + "/product");
-}
 
-/* RESET UI (NO RELOAD) */
-function resetUI() {
-    InitialCount = -1;
-    $("#home").empty().hide();
-    $("#final").hide();
-    $("#qr").hide();
-    $("#success").hide();
-    $("#startScreen").show();
-}
+/* =========================
+   CLEAR PRODUCTS (CHECKOUT)
+   ========================= */
+const deleteProducts = async () => {
+    try {
+        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
+        console.log("Products cleared on server");
+    } catch (err) {
+        console.error("Failed to clear products:", err);
+    }
+};
 
-/* CHECKOUT */
-async function checkout() {
-    $("#checkoutBtn").text("PROCESSING...");
+/* =========================
+   LOAD PRODUCTS
+   ========================= */
+const loadProducts = async () => {
+    try {
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
+        const len = products.length;
 
-    const res = await axios.get(API_BASE + "/product");
-    let total = 0;
-    res.data.forEach(p => total += parseFloat(p.payable));
+        if (len > InitialCount + 1) {
+            $("#1").css("display", "none");
+            $("#home").css("display", "grid");
+            $("#2").css("display", "grid");
 
-    const qrText = encodeURIComponent("Total Payable: LKR " + total.toFixed(2));
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${qrText}&size=300x300`;
+            let payable = 0;
+            for (let product of products) {
+                payable += parseFloat(product.payable);
+            }
 
-    $("#image").attr("src", qrUrl);
-    $("#home").hide();
-    $("#final").hide();
-    $("#qr").show();
+            const product = products[products.length - 1];
 
-    setTimeout(async () => {
-        $("#qr").hide();
-        $("#success").show();
+            const x = `
+            <section>
+                <div class="card card-long animated fadeInUp once">
+                    <img src="asset/img/${product.id}.jpg" class="album">
+                    <div class="span1">Product Name</div>
+                    <div class="card__product">${product.name}</div>
 
-        await deleteProducts();
+                    <div class="span2">Per Unit</div>
+                    <div class="card__price">${product.price}</div>
 
-        setTimeout(() => {
-            resetUI();
-        }, 3000);
+                    <div class="span3">Units</div>
+                    <div class="card__unit">${product.taken} ${product.unit}</div>
 
-    }, 8000);
-}
+                    <div class="span4">Payable</div>
+                    <div class="card__amount">${product.payable}</div>
+                </div>
+            </section>
+            `;
 
-/* AUTO REFRESH */
-setInterval(loadProducts, 300);
+            document.getElementById("home").innerHTML += x;
+            document.getElementById("2").innerHTML =
+                "CHECKOUT LKR " + payable.toFixed(2);
+
+            InitialCount += 1;
+        }
+    } catch (err) {
+        console.error("Load products failed:", err);
+    }
+};
+
+/* =========================
+   CHECKOUT FUNCTION
+   ========================= */
+var checkout = async () => {
+    try {
+        document.getElementById("2").innerHTML =
+            "<span class='loader-16' style='margin-left:44%;'></span>";
+
+        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
+        const products = res.data;
+
+        let payable = 0;
+        for (let product of products) {
+            payable += parseFloat(product.payable);
+        }
+
+        const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
+        const qrUrl =
+            `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(plainData)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
+
+        const img = await fetch(qrUrl).then(r => r.blob());
+        const image = URL.createObjectURL(img);
+
+        $("#home").css("display", "none");
+        $("#final").css("display", "none");
+        $("#image").attr("src", image);
+        $("#qr").css("display", "grid");
+
+        setTimeout(async () => {
+            $("#qr").css("display", "none");
+            $("#success").css("display", "grid");
+
+            // 🔥 CRITICAL FIX
+            await deleteProducts();
+
+            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
+            setTimeout(() => {
+                const baseUrl = window.location.href.split("?")[0];
+                window.location.href = baseUrl + "?refresh=" + Date.now();
+            }, 1000);
+
+        }, 10000);
+
+    } catch (err) {
+        console.error("Checkout failed:", err);
+    }
+};
+
+/* =========================
+   AUTO LOAD LOOP
+   ========================= */
+window.onload = () => {
+    setInterval(loadProducts, 300);
+};
