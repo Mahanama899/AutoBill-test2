@@ -1,132 +1,67 @@
-var InitialCount = -1;
+<!DOCTYPE html>
+<html lang="en">
 
-const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
-function goFullScreen() {
-    var el = document.documentElement;
-    if (el.requestFullscreen) {
-        el.requestFullscreen();
-    } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-    } else if (el.mozRequestFullScreen) {
-        el.mozRequestFullScreen();
-    }
-}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Automatic Billing</title>
+
+    <link rel="stylesheet" href="asset/css/style.css">
+
+    <script src="asset/scripts/script.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
 
 
-/* =========================
-   CLEAR PRODUCTS (CHECKOUT)
-   ========================= */
-const deleteProducts = async () => {
-    try {
-        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
-        console.log("Products cleared on server");
-    } catch (err) {
-        console.error("Failed to clear products:", err);
-    }
-};
+<body>
+    <!--Animation-->
+    <button onclick="goFullScreen()" style="position:fixed;top:10px;right:10px;z-index:9999;">
+    FULL SCREEN
+    </button>
 
-/* =========================
-   LOAD PRODUCTS
-   ========================= */
-const loadProducts = async () => {
-    try {
-        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
-        const products = res.data;
-        const len = products.length;
+    <div class="lottie" id="1">
+        <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_jioazy9u.json" background="transparent" speed="1" loop autoplay></lottie-player>
+        <div class="text">PLACE ITEMS TO START CHECKOUT</div>
+    </div>
 
-        if (len > InitialCount + 1) {
-            $("#1").css("display", "none");
-            $("#home").css("display", "grid");
-            $("#2").css("display", "grid");
+    <!--Main-->
+    <main id="home">
 
-            let payable = 0;
-            for (let product of products) {
-                payable += parseFloat(product.payable);
-            }
+    </main>
 
-            const product = products[products.length - 1];
+    <!--Checkout Button-->
+    <div id="final">
+        <button id="2" class="checkout" onclick="checkout()">CHECKOUT</button>
+    </div>
 
-            const x = `
-            <section>
-                <div class="card card-long animated fadeInUp once">
-                    <img src="asset/img/${product.id}.jpg" class="album">
-                    <div class="span1">Product Name</div>
-                    <div class="card__product">${product.name}</div>
 
-                    <div class="span2">Per Unit</div>
-                    <div class="card__price">${product.price}</div>
+    <!--QR code-->
+    <div id="qr" class="animated fadeInUp Once">
+        Scan QR Code To Pay
+        <img id="image" src="" />
+    </div>
 
-                    <div class="span3">Units</div>
-                    <div class="card__unit">${product.taken} ${product.unit}</div>
+    <!--Success-->
+    <div id="success">
+        <lottie-player src="https://assets7.lottiefiles.com/private_files/lf30_poez9ped.json"  background="transparent"  speed="1"  style="width: 300px; height: 300px;" loop autoplay></lottie-player>
+          </div>
 
-                    <div class="span4">Payable</div>
-                    <div class="card__amount">${product.payable}</div>
-                </div>
-            </section>
-            `;
 
-            document.getElementById("home").innerHTML += x;
-            document.getElementById("2").innerHTML =
-                "CHECKOUT LKR " + payable.toFixed(2);
 
-            InitialCount += 1;
+    <!--API data update listener-->
+    <script>
+        window.onload = () => {
+            setInterval(function() {
+                loadProducts();
+            }, 100);
         }
-    } catch (err) {
-        console.error("Load products failed:", err);
-    }
-};
+    </script>
 
-/* =========================
-   CHECKOUT FUNCTION
-   ========================= */
-var checkout = async () => {
-    try {
-        document.getElementById("2").innerHTML =
-            "<span class='loader-16' style='margin-left:44%;'></span>";
 
-        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
-        const products = res.data;
+</body>
 
-        let payable = 0;
-        for (let product of products) {
-            payable += parseFloat(product.payable);
-        }
 
-        const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
-        const qrUrl =
-            `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(plainData)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
-
-        const img = await fetch(qrUrl).then(r => r.blob());
-        const image = URL.createObjectURL(img);
-
-        $("#home").css("display", "none");
-        $("#final").css("display", "none");
-        $("#image").attr("src", image);
-        $("#qr").css("display", "grid");
-
-        setTimeout(async () => {
-            $("#qr").css("display", "none");
-            $("#success").css("display", "grid");
-
-            // 🔥 CRITICAL FIX
-            await deleteProducts();
-
-            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
-            setTimeout(() => {
-                const baseUrl = window.location.href.split("?")[0];
-                window.location.href = baseUrl + "?refresh=" + Date.now();
-            }, 1000);
-
-        }, 10000);
-
-    } catch (err) {
-        console.error("Checkout failed:", err);
-    }
-};
-
-/* =========================
-   AUTO LOAD LOOP
-   ========================= */
-window.onload = () => {
-    setInterval(loadProducts, 300);
-};
+</html>
