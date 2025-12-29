@@ -9,10 +9,16 @@ function goFullScreen() {
     if (el.requestFullscreen) el.requestFullscreen();
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+
+    // Hide fullscreen button after use
+    setTimeout(function () {
+        var btn = document.getElementById("fsBtn");
+        if (btn) btn.style.display = "none";
+    }, 500);
 }
 
 /* =========================
-   CLEAR PRODUCTS (POST /clear)
+   CLEAR PRODUCTS
    ========================= */
 const clearProducts = async function () {
     try {
@@ -31,21 +37,22 @@ const clearProducts = async function () {
 function resetUIAfterCheckout() {
     InitialCount = -1;
 
-    // Clear items
+    // Clear product cards
     document.getElementById("home").innerHTML = "";
 
-    // Hide states
+    // Hide all states
     $("#qr").hide();
     $("#success").hide();
+    $("#home").hide();
 
-    // Show start animation & checkout
+    // Show start screen & checkout button
     $("#1").show();
     $("#final").show();
 
-    // Reset checkout button
+    // Reset checkout text
     document.getElementById("2").innerHTML = "CHECKOUT";
 
-    console.log("UI reset without page reload");
+    console.log("UI reset complete");
 }
 
 /* =========================
@@ -84,6 +91,7 @@ const loadProducts = async function () {
                 '</section>';
 
             document.getElementById("home").innerHTML += card;
+
             document.getElementById("2").innerHTML =
                 "CHECKOUT LKR " + payable.toFixed(2);
 
@@ -95,7 +103,7 @@ const loadProducts = async function () {
 };
 
 /* =========================
-   CHECKOUT (NO PAGE RELOAD)
+   CHECKOUT (NO RELOAD)
    ========================= */
 var checkout = async function () {
     document.getElementById("2").innerHTML = "PROCESSING...";
@@ -121,15 +129,15 @@ var checkout = async function () {
     $("#final").hide();
     $("#qr").show();
 
-    // Show QR for payment
+    // Show QR
     setTimeout(async function () {
         $("#qr").hide();
         $("#success").show();
 
-        // Clear cart on server
+        // Clear server cart
         await clearProducts();
 
-        // Reset UI for next customer (NO reload)
+        // Reset UI for next customer
         setTimeout(function () {
             resetUIAfterCheckout();
         }, 2000);
