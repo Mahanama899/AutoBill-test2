@@ -104,23 +104,16 @@ var checkout = async () => {
         $("#image").attr("src", image);
         $("#qr").css("display", "grid");
 
-        setTimeout(async () => {
-            $("#qr").css("display", "none");
-            $("#success").css("display", "grid");
-
-            // 🔥 CRITICAL FIX
-            await deleteProducts();
-
-            InitialCount = -1;
-            document.getElementById("home").innerHTML = "";
-            $("#success").hide();
-            $("#1").show();
-            $("#final").show();
-
-
-
-
-        }, 10000);
+        setTimeout(async function () {
+            $("#qr").hide();
+            $("#success").show();
+            // Clear products on server
+            await clearProducts();
+            // After showing success, reset UI (NO reload)
+            setTimeout(function () {
+                resetUIAfterCheckout();
+            }, 2000);
+        }, 8000);
 
     } catch (err) {
         console.error("Checkout failed:", err);
