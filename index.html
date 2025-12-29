@@ -7,25 +7,24 @@
 
     <link rel="stylesheet" href="asset/css/style.css">
 
-    <!-- Libraries FIRST -->
+    <!-- Libraries -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
-    <!-- Your Script LAST -->
+    <!-- App Script -->
     <script src="asset/scripts/script.js"></script>
 </head>
 
 <body>
 
-<!-- FULL SCREEN BUTTON -->
 <button id="fsBtn" onclick="goFullScreen()"
     style="position:fixed;top:10px;right:10px;z-index:9999;">
     FULL SCREEN
 </button>
 
 <!-- START SCREEN -->
-<div class="lottie" id="1">
+<div class="lottie" id="startScreen" style="display:block;">
     <lottie-player
         src="https://assets1.lottiefiles.com/packages/lf20_jioazy9u.json"
         background="transparent"
@@ -39,12 +38,17 @@
 <!-- PRODUCT LIST -->
 <main id="home" style="display:none;"></main>
 
-<!-- CHECKOUT BUTTON -->
-<div id="final" style="display:none;">
-    <button id="2" class="checkout" onclick="checkout()">CHECKOUT</button>
+<!-- CHECKOUT BUTTON (INLINE STYLE OVERRIDES CSS) -->
+<div id="final" style="display:block !important;">
+    <button id="checkoutBtn"
+        class="checkout"
+        style="display:block !important;"
+        onclick="checkout()">
+        CHECKOUT
+    </button>
 </div>
 
-<!-- QR CODE -->
+<!-- QR -->
 <div id="qr" style="display:none;">
     <h3>Scan QR Code To Pay</h3>
     <img id="image" src="">
