@@ -44,7 +44,7 @@ body {
     flex-direction: column;
     justify-content: top;
     align-items: center;
-    background-color: #ecf0f3
+    background-color: #111111
 }
 
 .lottie {
@@ -55,7 +55,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: #ecf0f3;
+    background-color: #111111;
     text-align: center;
 }
 
