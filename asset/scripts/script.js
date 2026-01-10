@@ -1,16 +1,27 @@
 var InitialCount = -1;
+var checkoutRunning = false;
 
 const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
 
 /* =========================
-   CLEAR PRODUCTS (CHECKOUT)
+   FULL SCREEN
+   ========================= */
+function goFullScreen() {
+    var el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+}
+
+/* =========================
+   DELETE PRODUCTS (SERVER)
    ========================= */
 const deleteProducts = async () => {
     try {
-        await axios.delete(`${API_BASE}/product`, { withCredentials: false });
-        console.log("Products cleared on server");
+        await axios.delete(`${API_BASE}/product`, { timeout: 5000 });
+        console.log("Server products cleared");
     } catch (err) {
-        console.error("Failed to clear products:", err);
+        console.warn("Delete failed (ignored)");
     }
 };
 
@@ -19,23 +30,30 @@ const deleteProducts = async () => {
    ========================= */
 const loadProducts = async () => {
     try {
-        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
-        const products = res.data;
+        let res = await axios.get(`${API_BASE}/product`, { timeout: 3000 });
+        const products = res.data || [];
         const len = products.length;
 
-        if (len > InitialCount + 1) {
+        if (len === 0) {
+            $("#home").empty();
+            $("#1").css("display", "grid");
+            $("#home").css("display", "none");
+            $("#final").css("display", "none");
+            InitialCount = -1;
+            return;
+        }
+
+        if (len > InitialCount) {
             $("#1").css("display", "none");
             $("#home").css("display", "grid");
-            $("#2").css("display", "grid");
+            $("#final").css("display", "grid");
 
             let payable = 0;
-            for (let product of products) {
-                payable += parseFloat(product.payable);
-            }
+            products.forEach(p => payable += parseFloat(p.payable || 0));
 
             const product = products[products.length - 1];
 
-            const x = `
+            const card = `
             <section>
                 <div class="card card-long animated fadeInUp once">
                     <img src="asset/img/${product.id}.jpg" class="album">
@@ -54,64 +72,75 @@ const loadProducts = async () => {
             </section>
             `;
 
-            document.getElementById("home").innerHTML += x;
-            document.getElementById("2").innerHTML =
-                "CHECKOUT LKR " + payable.toFixed(2);
+            $("#home").append(card);
+            $("#2").html("CHECKOUT LKR " + payable.toFixed(2));
 
-            InitialCount += 1;
+            InitialCount = len;
         }
     } catch (err) {
-        console.error("Load products failed:", err);
+        console.warn("Load products failed (safe)");
     }
 };
 
 /* =========================
-   CHECKOUT FUNCTION
+   CHECKOUT (MOVE UI FIRST)
    ========================= */
-var checkout = async () => {
+async function checkout() {
+    if (checkoutRunning) return;
+    checkoutRunning = true;
+
+    // Disable button immediately
+    $("#2").html("<span class='loader-16'></span>");
+    $("#2").prop("disabled", true);
+
+    /* -------- STEP 1: MOVE UI FIRST -------- */
+    $("#home").css("display", "none");
+    $("#final").css("display", "none");
+    $("#qr").css("display", "grid");
+
+    // Temporary QR
+    $("#image").attr(
+        "src",
+        "https://api.qrserver.com/v1/create-qr-code/?data=Processing...&size=400x400"
+    );
+
+    /* -------- STEP 2: FETCH TOTAL (BACKGROUND) -------- */
+    let payable = 0;
     try {
-        document.getElementById("2").innerHTML =
-            "<span class='loader-16' style='margin-left:44%;'></span>";
-
-        let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
-        const products = res.data;
-
-        let payable = 0;
-        for (let product of products) {
-            payable += parseFloat(product.payable);
-        }
-
-        const plainData = `Total Payable: LKR ${payable.toFixed(2)}`;
-        const qrUrl =
-            `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(plainData)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
-
-        const img = await fetch(qrUrl).then(r => r.blob());
-        const image = URL.createObjectURL(img);
-
-        $("#home").css("display", "none");
-        $("#final").css("display", "none");
-        $("#image").attr("src", image);
-        $("#qr").css("display", "grid");
-
-        setTimeout(async () => {
-            $("#qr").css("display", "none");
-            $("#success").css("display", "grid");
-
-            // 🔥 CRITICAL FIX
-            await deleteProducts();
-
-            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
-            setTimeout(() => {
-                const baseUrl = window.location.href.split("?")[0];
-                window.location.href = baseUrl + "?refresh=" + Date.now();
-            }, 1000);
-
-        }, 1000);
-
-    } catch (err) {
-        console.error("Checkout failed:", err);
+        const res = await axios.get(`${API_BASE}/product`, { timeout: 5000 });
+        const products = res.data || [];
+        products.forEach(p => payable += parseFloat(p.payable || 0));
+    } catch (e) {
+        console.warn("Fetch failed, continuing");
     }
-};
+
+    /* -------- STEP 3: UPDATE QR -------- */
+    const qrText = `Total Payable: LKR ${payable.toFixed(2)}`;
+    const qrUrl =
+        `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrText)}&size=400x400&color=02c8db&bgcolor=ecf0f3`;
+    $("#image").attr("src", qrUrl);
+
+    /* -------- STEP 4: SUCCESS SCREEN -------- */
+    setTimeout(() => {
+        $("#qr").css("display", "none");
+        $("#success").css("display", "grid");
+    }, 10000);
+
+    /* -------- STEP 5: CLEANUP + RESET -------- */
+    setTimeout(async () => {
+        await deleteProducts();
+
+        $("#success").css("display", "none");
+        $("#1").css("display", "grid");
+        $("#home").css("display", "none").empty();
+        $("#final").css("display", "none");
+        $("#2").html("CHECKOUT").prop("disabled", false);
+
+        InitialCount = -1;
+        checkoutRunning = false;
+
+    }, 13000);
+}
 
 /* =========================
    AUTO LOAD LOOP
