@@ -1,17 +1,6 @@
 var InitialCount = -1;
 
 const API_BASE = "https://lionfish-app-oy7gr.ondigitalocean.app";
-function goFullScreen() {
-    var el = document.documentElement;
-    if (el.requestFullscreen) {
-        el.requestFullscreen();
-    } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-    } else if (el.mozRequestFullScreen) {
-        el.mozRequestFullScreen();
-    }
-}
-
 
 /* =========================
    CLEAR PRODUCTS (CHECKOUT)
@@ -33,15 +22,6 @@ const loadProducts = async () => {
         let res = await axios.get(`${API_BASE}/product`, { withCredentials: false });
         const products = res.data;
         const len = products.length;
-
-        if (len === 0) {
-            $("#home").empty();
-            $("#1").css("display", "grid");
-            $("#home").css("display", "none");
-            $("#2").css("display", "none");
-            InitialCount = -1;
-            return;
-        }
 
         if (len > InitialCount + 1) {
             $("#1").css("display", "none");
@@ -88,9 +68,6 @@ const loadProducts = async () => {
 /* =========================
    CHECKOUT FUNCTION
    ========================= */
-/* =========================
-   CHECKOUT FUNCTION (FIXED)
-   ========================= */
 var checkout = async () => {
     try {
         document.getElementById("2").innerHTML =
@@ -120,24 +97,16 @@ var checkout = async () => {
             $("#qr").css("display", "none");
             $("#success").css("display", "grid");
 
-            // 1. Clear products on server
+            // 🔥 CRITICAL FIX
             await deleteProducts();
 
-            // 2. WAIT AND RESET (NO RELOAD)
+            // 🔥 FORCE CLEAN RELOAD (MOBILE SAFE)
             setTimeout(() => {
-                // Reset UI visibility
-                $("#success").css("display", "none");
-                $("#1").css("display", "grid"); // Show "Place Items" animation
-                $("#home").css("display", "none").empty(); // Clear product list
-                $("#2").css("display", "none").html("CHECKOUT"); // Reset button text
-                $("#final").css("display", "block");
+                const baseUrl = window.location.href.split("?")[0];
+                window.location.href = baseUrl + "?refresh=" + Date.now();
+            }, 1000);
 
-                // CRITICAL: Reset the counter so the loop starts from 0 again
-                InitialCount = -1; 
-                
-            }, 3000); // 3 seconds of success screen before reset
-
-        }, 10000);
+        }, 1000);
 
     } catch (err) {
         console.error("Checkout failed:", err);
