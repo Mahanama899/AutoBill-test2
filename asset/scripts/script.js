@@ -30,23 +30,24 @@ const deleteProducts = async () => {
    ========================= */
 const loadProducts = async () => {
     try {
-        let res = await axios.get(`${API_BASE}/product`, { timeout: 3000 });
+        const res = await axios.get(`${API_BASE}/product`, { timeout: 3000 });
         const products = res.data || [];
         const len = products.length;
 
+        // No products → idle screen
         if (len === 0) {
-            $("#home").empty();
+            $("#home").empty().hide();
             $("#1").css("display", "grid");
-            $("#home").css("display", "none");
-            $("#final").css("display", "none");
+            $("#2").hide();               // hide checkout button ONLY
             InitialCount = -1;
             return;
         }
 
+        // New product added
         if (len > InitialCount) {
-            $("#1").css("display", "none");
+            $("#1").hide();
             $("#home").css("display", "grid");
-            $("#final").css("display", "grid");
+            $("#2").css("display", "grid");   // show checkout button
 
             let payable = 0;
             products.forEach(p => payable += parseFloat(p.payable || 0));
@@ -57,6 +58,7 @@ const loadProducts = async () => {
             <section>
                 <div class="card card-long animated fadeInUp once">
                     <img src="asset/img/${product.id}.jpg" class="album">
+
                     <div class="span1">Product Name</div>
                     <div class="card__product">${product.name}</div>
 
@@ -89,13 +91,13 @@ async function checkout() {
     if (checkoutRunning) return;
     checkoutRunning = true;
 
-    // Disable button immediately
+    // Disable checkout button immediately
     $("#2").html("<span class='loader-16'></span>");
     $("#2").prop("disabled", true);
 
     /* -------- STEP 1: MOVE UI FIRST -------- */
-    $("#home").css("display", "none");
-    $("#final").css("display", "none");
+    $("#home").hide();
+    $("#2").hide();                 // hide button ONLY
     $("#qr").css("display", "grid");
 
     // Temporary QR
@@ -122,7 +124,7 @@ async function checkout() {
 
     /* -------- STEP 4: SUCCESS SCREEN -------- */
     setTimeout(() => {
-        $("#qr").css("display", "none");
+        $("#qr").hide();
         $("#success").css("display", "grid");
     }, 10000);
 
@@ -130,11 +132,10 @@ async function checkout() {
     setTimeout(async () => {
         await deleteProducts();
 
-        $("#success").css("display", "none");
-        $("#1").css("display", "grid");
-        $("#home").css("display", "none").empty();
-        $("#final").css("display", "none");
-        $("#2").html("CHECKOUT").prop("disabled", false);
+        $("#success").hide();
+        $("#1").css("display", "grid");  // idle screen
+        $("#home").hide().empty();
+        $("#2").html("CHECKOUT").prop("disabled", false).hide();
 
         InitialCount = -1;
         checkoutRunning = false;
